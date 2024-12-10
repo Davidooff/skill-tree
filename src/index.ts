@@ -7,11 +7,9 @@ interface PossibleUnlock<T> {
 
 class Unlocks<T extends UnlockData> {
   skillTree: SkillTree<T>;
-  possibleToUnlock: PossibleUnlock<T>[];
 
   constructor(unlocksTree: SkillTree<T>) {
     this.skillTree = unlocksTree;
-    this.possibleToUnlock = this.getPossibleToUnlock();
   }
 
   public setUnlockedByPath(path: number[], isUnlocked: boolean): void {
@@ -58,42 +56,26 @@ class Unlocks<T extends UnlockData> {
     }
   }
 
-  public getPossibleToUnlock(): PossibleUnlock<T>[] {
-    let result: PossibleUnlock<T>[] = [];
-    let path: number[] = [0];
-    while (true) {
-      let current: SkillTree<T> | T | undefined = this.skillTree;
-      if (path[0] !== 0) {
-        break;
+  private _getPossibleToUnlock(skillTree: SkillTree<T> | T): T[] | T | null {
+    if ("skill" in skillTree) {
+      if (skillTree.skill.isUnlocked) {
+        return skillTree.nextSkills
+          .flatMap((el) => this._getPossibleToUnlock(el))
+          .filter((el) => el !== null);
+      } else {
+        return skillTree.skill;
       }
-
-      for (let i = 1; i < path.length; i++) {
-        if ("nextSkills" in current && current.nextSkills) {
-          current = current.nextSkills[i];
-        }
-      }
-
-      if (current === undefined) {
-        if (path.length === 1) {
-          break;
-        }
-        path.pop();
-        path[path.length - 1]++;
-      } else if ("nextSkills" in current) {
-        if (current.skill.isUnlocked) {
-          path.push(0);
-        } else {
-          result.push({ skill: current.skill, path });
-          path[path.length - 1]++;
-        }
-      } else if ("isUnlocked" in current) {
-        if (!current.isUnlocked) {
-          result.push({ skill: current, path });
-          path[path.length - 1]++;
-        }
+    } else {
+      if (skillTree.isUnlocked) {
+        return null;
+      } else {
+        return skillTree;
       }
     }
-    return result;
+  }
+
+  public getPossibleToUnlock(): T[] | T | null {
+    return this._getPossibleToUnlock(this.skillTree);
   }
 }
 
@@ -118,8 +100,10 @@ const myTree: SkillTree<MySkillData> = {
 const unlocks = new Unlocks(myTree);
 
 // Suppose we want to unlock the second grandchild of the first child skill: path is [0, 1]
-unlocks.setUnlockedByPath([0, 1], true);
+unlocks.setUnlockedByPath([0], true);
+unlocks.setUnlockedByPath([0, 0], true);
 
 console.log(JSON.stringify(unlocks.skillTree, null, 2));
+console.log(JSON.stringify(unlocks.getPossibleToUnlock(), null, 2));
 
 export default Unlocks;
