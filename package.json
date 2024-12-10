@@ -2,9 +2,12 @@
   "name": "skill-tree",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsup ./src/index.ts --format cjs,esm --dts",
+    "lint": "tsc"
   },
   "repository": {
     "type": "git",
@@ -15,9 +18,5 @@
   "bugs": {
     "url": "https://github.com/Davidooff/skill-tree/issues"
   },
-  "homepage": "https://github.com/Davidooff/skill-tree#readme",
-  "devDependencies": {
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
-  }
+  "homepage": "https://github.com/Davidooff/skill-tree#readme"
 }
