@@ -106,15 +106,7 @@ class Unlocks<T extends UnlockData> {
         }
 
         // Enqueue child nodes for further traversal
-        if (skipLocked) {
-          if (skillData.isUnlocked) {
-            currentNode.nextSkills.forEach((child) => {
-              if (this.isSkillTree(child)) {
-                queue.push(child);
-              }
-            });
-          }
-        } else {
+        if (!skipLocked || (skipLocked && skillData.isUnlocked)) {
           currentNode.nextSkills.forEach((child) => {
             if (this.isSkillTree(child)) {
               queue.push(child);
