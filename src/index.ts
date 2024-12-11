@@ -25,7 +25,7 @@ class Unlocks<T extends UnlockData> {
 
   // Private recursive helper method
   private _setUnlockedByPath(
-    tree: SkillTree<T>,
+    tree: SkillTree<T> | T,
     path: number[],
     isUnlocked: boolean
   ): void {
@@ -59,9 +59,10 @@ class Unlocks<T extends UnlockData> {
   private _getPossibleToUnlock(skillTree: SkillTree<T> | T): T[] | T | null {
     if ("skill" in skillTree) {
       if (skillTree.skill.isUnlocked) {
-        return skillTree.nextSkills
-          .flatMap((el) => this._getPossibleToUnlock(el))
-          .filter((el) => el !== null);
+        let result = skillTree.nextSkills
+          .flatMap((el: SkillTree<T> | T) => this._getPossibleToUnlock(el))
+          .filter((el: SkillTree<T> | T | null) => el !== null);
+        return result.length !== 0 ? result : null;
       } else {
         return skillTree.skill;
       }
@@ -76,6 +77,72 @@ class Unlocks<T extends UnlockData> {
 
   public getPossibleToUnlock(): T[] | T | null {
     return this._getPossibleToUnlock(this.skillTree);
+  }
+
+  private isSkillTree(node: SkillTree<T> | T): node is SkillTree<T> {
+    return (node as SkillTree<T>).skill !== undefined;
+  }
+
+  private _unlockByKey(
+    treeEl: SkillTree<T>,
+    findKey: string,
+    findData: any,
+    setUnlock: boolean = true,
+    skipLocked: boolean = false
+  ): void {
+    const queue: Array<SkillTree<T> | T> = [treeEl];
+
+    while (queue.length > 0) {
+      const currentNode = queue.shift()!; // Dequeue the first element
+
+      if (this.isSkillTree(currentNode)) {
+        // If node has 'skill'
+        const skillData = currentNode.skill;
+
+        if (findKey in skillData && skillData[findKey] === findData) {
+          // Found the matching node
+          currentNode.skill.isUnlocked = setUnlock; // Assuming 'isUnlocked' is a property of SkillTree
+          return; // Exit after finding the first match
+        }
+
+        // Enqueue child nodes for further traversal
+        if (skipLocked) {
+          if (skillData.isUnlocked) {
+            currentNode.nextSkills.forEach((child) => {
+              if (this.isSkillTree(child)) {
+                queue.push(child);
+              }
+            });
+          }
+        } else {
+          currentNode.nextSkills.forEach((child) => {
+            if (this.isSkillTree(child)) {
+              queue.push(child);
+            }
+          });
+        }
+      } else {
+        // If node does not have 'skill', assume it's of type T
+        const dataNode = currentNode as any; // Replace 'any' with actual type if known
+
+        if (dataNode[findKey] === findData) {
+          dataNode.isUnlocked = setUnlock; // Assuming 'isUnlocked' exists on T
+          return; // Exit after finding the first match
+        }
+      }
+    }
+    throw new Error("Not found");
+  }
+
+  public setUnlockedByKey(find: Object) {
+    const findKey = Object.keys(find);
+    const findValues = Object.values(find);
+
+    if (findKey.length !== 1) {
+      throw new Error("You can pas only one key");
+    }
+
+    this._unlockByKey(this.skillTree, findKey[0], findValues[0]);
   }
 }
 
@@ -101,7 +168,7 @@ const unlocks = new Unlocks(myTree);
 
 // Suppose we want to unlock the second grandchild of the first child skill: path is [0, 1]
 unlocks.setUnlockedByPath([0], true);
-unlocks.setUnlockedByPath([0, 0], true);
+unlocks.setUnlockedByKey({ name: "ChildSkill1" });
 
 console.log(JSON.stringify(unlocks.skillTree, null, 2));
 console.log(JSON.stringify(unlocks.getPossibleToUnlock(), null, 2));

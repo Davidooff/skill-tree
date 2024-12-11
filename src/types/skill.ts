@@ -1,4 +1,5 @@
 export interface UnlockData {
+  [key: string]: any;
   isUnlocked: boolean;
 }
 
