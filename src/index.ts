@@ -1,10 +1,5 @@
 import { type SkillTree, type UnlockData } from "./types/skill";
 
-interface PossibleUnlock<T> {
-  skill: T;
-  path: number[];
-}
-
 class Unlocks<T extends UnlockData> {
   skillTree: SkillTree<T>;
 
@@ -41,7 +36,7 @@ class Unlocks<T extends UnlockData> {
     if (nextNode === undefined) throw new Error("path error");
 
     // Check if nextNode is a leaf skill or another SkillTree
-    if (!("skill" in nextNode)) {
+    if (!this.isSkillTree(nextNode)) {
       // nextNode is a leaf skill
       if (remainingPath.length > 0) {
         throw new Error(
@@ -57,11 +52,11 @@ class Unlocks<T extends UnlockData> {
   }
 
   private _getPossibleToUnlock(skillTree: SkillTree<T> | T): T[] | T | null {
-    if ("skill" in skillTree) {
+    if (this.isSkillTree(skillTree)) {
       if (skillTree.skill.isUnlocked) {
-        let result = skillTree.nextSkills
+        let result: T[] = skillTree.nextSkills
           .flatMap((el: SkillTree<T> | T) => this._getPossibleToUnlock(el))
-          .filter((el: SkillTree<T> | T | null) => el !== null);
+          .filter((el: T | null) => el !== null);
         return result.length !== 0 ? result : null;
       } else {
         return skillTree.skill;
@@ -86,9 +81,9 @@ class Unlocks<T extends UnlockData> {
   private _unlockByKey(
     treeEl: SkillTree<T>,
     findKey: string,
-    findData: any,
-    setUnlock: boolean = true,
-    skipLocked: boolean = false
+    findData: string | number,
+    setUnlock: boolean,
+    skipLocked: boolean
   ): void {
     const queue: Array<SkillTree<T> | T> = [treeEl];
 
@@ -126,7 +121,11 @@ class Unlocks<T extends UnlockData> {
     throw new Error("Not found");
   }
 
-  public setUnlockedByKey(find: Object) {
+  public setUnlockedByKey(
+    find: Object,
+    setUnlock: boolean = true,
+    skipLocked: boolean = false
+  ) {
     const findKey = Object.keys(find);
     const findValues = Object.values(find);
 
@@ -134,7 +133,13 @@ class Unlocks<T extends UnlockData> {
       throw new Error("You can pas only one key");
     }
 
-    this._unlockByKey(this.skillTree, findKey[0], findValues[0]);
+    this._unlockByKey(
+      this.skillTree,
+      findKey[0],
+      findValues[0],
+      setUnlock,
+      skipLocked
+    );
   }
 }
 
@@ -160,7 +165,7 @@ const unlocks = new Unlocks(myTree);
 
 // Suppose we want to unlock the second grandchild of the first child skill: path is [0, 1]
 unlocks.setUnlockedByPath([0], true);
-unlocks.setUnlockedByKey({ name: "ChildSkill1" });
+unlocks.setUnlockedByKey({ name: "ChildSkill1" }, true, true);
 
 console.log(JSON.stringify(unlocks.skillTree, null, 2));
 console.log(JSON.stringify(unlocks.getPossibleToUnlock(), null, 2));
